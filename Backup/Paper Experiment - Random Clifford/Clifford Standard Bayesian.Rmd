@@ -1,0 +1,109 @@
+---
+title: "QAOA"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(mc.cores = parallel::detectCores())
+library(rstan)
+source("MA480Styles.R")
+```
+
+
+```{r}
+file_address <- 'Noise/'
+q1 <- read.csv(paste(file_address,"Qubit1.csv",sep = ""),na.strings="NA",header=TRUE)
+q2 <- read.csv(paste(file_address,"Qubit2.csv",sep = ""),na.strings="NA",header=TRUE)
+means <- read.csv(paste(file_address,"given_params.csv",sep = ""),na.strings="NA",header=FALSE)
+```
+
+```{stan output.var="q_model",echo = FALSE,results = "hide"}
+data {
+  int<lower = 0> N;
+  real<lower = 0,upper = 1> y[N];
+  real<lower = 0,upper = 1> x[N];
+  real<lower = 0,upper = 1> gp0;
+  real<lower = 0,upper = 1> gp1;
+}
+
+parameters {
+  real<lower = 0,upper = 1> p0;
+  real<lower = 0,upper = 1> p1;
+  real<lower = 0> sigma;
+}
+
+model {
+  sigma ~ cauchy(0,1);
+  p0 ~ normal(gp0,0.1);
+  p1 ~ normal(gp1,0.1);
+  
+  for (i in 1:N) {
+    y[i] ~ normal(x[i] * p0 + (1-x[i]) * (1-p1),sigma);
+  }
+}
+```
+
+
+```{r}
+dataList.q1 <- list(N = nrow(q1),gp0 = means$V1[2],gp1 = means$V2[2],x = q1$x,y = q1$y)
+dataList.q2 <- list(N = nrow(q2),gp0 = means$V1[1],gp1 = means$V2[1],x = q2$x,y = q2$y)
+fit.q1 <- stan(model_code = q_model@model_code,data = dataList.q1,iter = 10000,warmup = 2000, control = list(adapt_delta = 0.99))
+fit.q2 <- stan(model_code = q_model@model_code,data = dataList.q2,iter = 10000,warmup = 2000, control = list(adapt_delta = 0.99))
+```
+
+```{r}
+traceplot(fit.q1,inc_warmup=FALSE)
+traceplot(fit.q2,inc_warmup=FALSE)
+```
+
+```{r}
+sampler_params <- get_sampler_params(fit.q1,inc_warmup = FALSE)
+summary(do.call(rbind,sampler_params),digits=2)
+
+sampler_params <- get_sampler_params(fit.q2,inc_warmup = FALSE)
+summary(do.call(rbind,sampler_params),digits=2)
+```
+
+```{r}
+fit.q1
+fit.q2
+```
+
+
+```{r}
+df.q1 <- stan_to_df(fit.q1)
+df.q2 <- stan_to_df(fit.q2)
+noise_params.q1 <- data.frame(p0 = df.q1$p0,p1 = df.q1$p1)
+noise_params.q2 <- data.frame(p0 = df.q2$p0,p1 = df.q2$p1)
+```
+
+
+
+```{r}
+write.csv(noise_params.q1,paste(file_address,"StandPostQubit1.csv",sep = ""), row.names = FALSE)
+write.csv(noise_params.q2,paste(file_address,"StandPostQubit2.csv",sep = ""), row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

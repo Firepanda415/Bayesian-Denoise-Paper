@@ -496,7 +496,7 @@ def plotComparsion(data, post_lambdas, q, file_address=''):
                          'StandPostQubit{}.csv'.format(q)).to_numpy()
     SB = QoI_gate(postSB, 1, 200)
     OB = QoI_gate(post_lambdas, 1, 200)
-    minSB = min(SB)
+    minSB = min(SB) 
     minOB = min(OB)
     maxSB = max(SB)
     maxOB = max(OB)
@@ -507,7 +507,7 @@ def plotComparsion(data, post_lambdas, q, file_address=''):
     
     figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
     plt.plot(line, SBker(line), color='Green', linewidth=2, label='Standard')
-    plt.plot(line, OBker(line), color='Blue', linewidth=4, label='BJW')
+    plt.plot(line, OBker(line), color='Blue', linewidth=4, label='Consistent')
     plt.plot(line,
              dker(line),
              color='Red',
