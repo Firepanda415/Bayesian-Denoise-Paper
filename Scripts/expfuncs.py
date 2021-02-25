@@ -73,7 +73,7 @@ def all_methods_data(interested_qubits,
     for i in range(len(meas_calibs)):
         meas_calibs[i] = transpile(meas_calibs[i],
                                    backend,
-                                   initial_layout=interested_qubits)
+                                   initial_layout=interested_qubits[::-1])
 
     job = execute(meas_calibs,
                   backend=backend,
@@ -260,7 +260,7 @@ def create_filters(interested_qubits,
     if from_file:
         mf.post_from_file()
     else:
-        mf.inference(seed=seed,
+        mf.inference(nPrior=100000, seed=seed,
                      show_denoised=show_denoised,
                      shots_per_point=shots_per_point)
 
