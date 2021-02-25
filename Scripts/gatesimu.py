@@ -22,7 +22,7 @@ from cvxopt import matrix, solvers
 from measfilter import *
 
 fig_size = (8,6)
-fig_dpi = 200
+fig_dpi = 100
 
 
 ######################## For Parameter Characterzation ########################
@@ -323,11 +323,17 @@ def output_gate(d,
     # Algorithm 2 of https://doi.org/10.1137/16M1087229
 
     # Find the max ratio r(Q(lambda)) over all lambdas
-    max_r, max_ind = findM(qs_ker, d_ker, qs)
+#    max_r, max_ind = findM(qs_ker, d_ker, qs)
+#    # Print and Check
+#    print('Final Accepted Posterior Lambdas')
+#    print('M: %.6g Index: %.d pi_obs = %.6g pi_Q(prior) = %.6g' %
+#          (max_r, max_ind, d_ker(qs[max_ind]), qs_ker(qs[max_ind])))
+    
+    max_r, max_q = findM(qs_ker, d_ker)
     # Print and Check
     print('Final Accepted Posterior Lambdas')
-    print('M: %.6g Index: %.d pi_obs = %.6g pi_Q(prior) = %.6g' %
-          (max_r, max_ind, d_ker(qs[max_ind]), qs_ker(qs[max_ind])))
+    print('M: %.6g Maximizer: %.6g pi_obs = %.6g pi_Q(prior) = %.6g' %
+          (max_r, max_q, d_ker(max_q), qs_ker(max_q)))
 
     post_lambdas = np.array([])
     # Go to Rejection Iteration

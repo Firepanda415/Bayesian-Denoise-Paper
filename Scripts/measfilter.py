@@ -21,9 +21,11 @@ from matplotlib.pyplot import figure
 
 # For optimization
 from cvxopt import matrix, solvers
+from scipy.optimize import minimize_scalar
+from scipy.special import j1
 
 fig_size = (8,6)
-fig_dpi = 200
+fig_dpi = 100
 
 
 def param_record(backend, itr=32, shots=8192, if_write=True, file_address=''):
@@ -519,12 +521,19 @@ def QoI(prior_lambdas):
     return qs
 
 
-def findM(qs_ker, d_ker, qs):
+def dq(x, qs_ker, d_ker):
+    if qs_ker(x) > 0:
+        return  - d_ker(x) / qs_ker(x)
+    else:
+        return np.infty
+
+
+def findM(qs_ker, d_ker):
     """
     Function for finding the M, the largest r(Q(lambda)) over all lambda
     in Algorithm 2 of https://doi.org/10.1137/16M1087229
     
-    For now we just use the largest ratio r from all given P samples
+    we use minimize_scalar from scipy
 
     Parameters
     ----------
@@ -539,18 +548,21 @@ def findM(qs_ker, d_ker, qs):
     -------
     M : float
         the largest r(Q(lambda)) over all lambda
-    index : int
+    optimizer : float
         corresponding index of M
 
     """
-    M = -1  # probablities cannot be negative, so -1 is small enough
-    index = -1
-    for i in range(qs.size):
-        if qs_ker(qs[i]) > 0:
-            if M <= d_ker(qs[i]) / qs_ker(qs[i]):
-                M = d_ker(qs[i]) / qs_ker(qs[i])
-                index = i
-    return M, index
+#    M = -1  # probablities cannot be negative, so -1 is small enough
+#    index = -1
+#    for i in range(qs.size):
+#        if qs_ker(qs[i]) > 0:
+#            if M <= d_ker(qs[i]) / qs_ker(qs[i]):
+#                M = d_ker(qs[i]) / qs_ker(qs[i])
+#                index = i
+#                
+    res = minimize_scalar(dq, args =(qs_ker, d_ker) ,bounds=(0,1), method='bounded')
+    
+    return -res.fun[0], res.x[0]
 
 
 def find_least_norm(nQubits, ptilde):
@@ -651,11 +663,11 @@ def output(d,
 
     # Compute distribution of Pr(meas. 0) from Qiskit results
     given_errmat = errMitMat(average_lambdas)
-    qiskit_p0 = np.empty(len(d))
-    for i in range(len(d)):
-        single_res = nl.solve(given_errmat, [d[i], 1 - d[i]])
-        qiskit_p0[i] = single_res[0]
-    qiskit_ker = ss.gaussian_kde(qiskit_p0)
+#    qiskit_p0 = np.empty(len(d))
+#    for i in range(len(d)):
+#        single_res = nl.solve(given_errmat, [d[i], 1 - d[i]])
+#        qiskit_p0[i] = single_res[0]
+#    qiskit_ker = ss.gaussian_kde(qiskit_p0)
 
     if average_lambdas[0] == 1 or average_lambdas[0] < 0.7:
         average_lambdas[0] = 0.9
@@ -685,20 +697,31 @@ def output(d,
     # Algorithm 2 of https://doi.org/10.1137/16M1087229
 
     # Find the max ratio r(Q(lambda)) over all lambdas
-    max_r, max_ind = findM(qs_ker, d_ker, qs)
+#    max_r, max_ind = findM(qs_ker, d_ker, qs)
+#    # Print and Check
+#    print('Final Accepted Posterior Lambdas')
+#    print('M: %.6g Index: %.d pi_obs = %.6g pi_Q(prior) = %.6g' %
+#          (max_r, max_ind, d_ker(qs[max_ind]), qs_ker(qs[max_ind])))
+    
+    max_r, max_q = findM(qs_ker, d_ker)
     # Print and Check
     print('Final Accepted Posterior Lambdas')
-    print('M: %.6g Index: %.d pi_obs = %.6g pi_Q(prior) = %.6g' %
-          (max_r, max_ind, d_ker(qs[max_ind]), qs_ker(qs[max_ind])))
+    print('M: %.6g Maximizer: %.6g pi_obs = %.6g pi_Q(prior) = %.6g' %
+          (max_r, max_q, d_ker(max_q), qs_ker(max_q)))
 
     post_lambdas = np.array([])
     # Go to Rejection Iteration
     for p in range(M):
+        # Monitor Progress
+        print('Progress: {:.3%}'.format(p/M), end='\r')
+        
         r = d_ker(qs[p]) / qs_ker(qs[p])
         eta = r / max_r
         if eta > np.random.uniform(0, 1, 1):
             post_lambdas = np.append(post_lambdas, prior_lambdas[p])
-
+    print()
+    
+    
     post_lambdas = post_lambdas.reshape(
         int(post_lambdas.size / num_lambdas),
         num_lambdas)  # Reshape since append destory subarrays
