@@ -24,8 +24,119 @@ from cvxopt import matrix, solvers
 from scipy.optimize import minimize_scalar
 from scipy.special import j1
 
-fig_size = (8,6)
-fig_dpi = 100
+# fig_size = (8,6)
+# fig_dpi = 100
+import matplotlib        as     mpl
+from   matplotlib        import rc
+from   cycler            import cycler
+
+_widths = {
+    # a4paper columnwidth = 426.79135 pt = 5.93 in
+    # letterpaper columnwidth = 443.57848 pt = 6.16 in
+    'onecolumn': {
+        'a4paper' : 5.93,
+        'letterpaper' : 6.16
+    },
+    # a4paper columnwidth = 231.84843 pt = 3.22 in
+    # letterpaper columnwidth = 240.24199 pt = 3.34 in
+    'twocolumn': {
+        'a4paper' : 3.22,
+        'letterpaper' : 3.34
+    }
+}
+
+_wide_widths = {
+    # a4paper wide columnwidth = 426.79135 pt = 5.93 in
+    # letterpaper wide columnwidth = 443.57848 pt = 6.16 in
+    'onecolumn': {
+        'a4paper' : 5.93,
+        'letterpaper' : 6.16
+    },
+    # a4paper wide linewidth = 483.69687 pt = 6.72 in
+    # letterpaper wide linewidth = 500.48400 pt = 6.95 in
+    'twocolumn': {
+        'a4paper' : 6.72,
+        'letterpaper' : 6.95
+    }
+}
+
+_fontsizes = {
+    10 : {
+        'tiny' : 5,
+        'scriptsize' : 7,
+        'footnotesize' : 8, 
+        'small' : 9, 
+        'normalsize' : 10,
+        'large' : 12, 
+        'Large' : 14, 
+        'LARGE' : 17,
+        'huge' : 20,
+        'Huge' : 25
+    },
+    11 : {
+        'tiny' : 6,
+        'scriptsize' : 8,
+        'footnotesize' : 9, 
+        'small' : 10, 
+        'normalsize' : 11,
+        'large' : 12, 
+        'Large' : 14, 
+        'LARGE' : 17,
+        'huge' :  20,
+        'Huge' :  25
+    },
+    12 : {
+        'tiny' : 6,
+        'scriptsize' : 8,
+        'footnotesize' : 10, 
+        'small' : 11, 
+        'normalsize' : 12,
+        'large' : 14, 
+        'Large' : 17, 
+        'LARGE' : 20,
+        'huge' :  25,
+        'Huge' :  25
+    }
+}
+
+_width         = 1
+_wide_width    = 1
+_quantumviolet = '#53257F'
+_quantumgray   = '#555555'
+
+
+columns = 'twocolumn'
+paper = 'a4paper'
+fontsize = 10
+
+
+plt.rcdefaults()
+    
+# Seaborn white is a good base style
+plt.style.use(['seaborn-white', '../Plots/quantum-plots.mplstyle'])
+
+
+_width = _widths[columns][paper]
+
+ 
+_wide_width = _wide_widths[columns][paper]
+
+# Use the default fontsize scaling of LaTeX
+
+fontsizes = _fontsizes[fontsize]
+
+plt.rcParams['axes.labelsize'] = fontsizes['small']
+plt.rcParams['axes.titlesize'] = fontsizes['large']
+plt.rcParams['xtick.labelsize'] = fontsizes['footnotesize']
+plt.rcParams['ytick.labelsize'] = fontsizes['footnotesize']
+plt.rcParams['font.size'] = fontsizes['small']
+
+aspect_ratio = 1/1.62
+width_ratio = 1.0
+wide = False
+
+width = (_wide_width if wide else _width) * width_ratio
+height = width * aspect_ratio
 
 
 def param_record(backend, itr=32, shots=8192, if_write=True, file_address=''):
@@ -522,8 +633,11 @@ def QoI(prior_lambdas):
 
 
 def dq(x, qs_ker, d_ker):
-    if qs_ker(x) > 0:
-        return  - d_ker(x) / qs_ker(x)
+    if qs_ker(x)[0] > 0:
+        if np.abs(d_ker(x)[0]) <1e-6: # A lot of 0s in both sides may cause opt algorithm terminates
+            return np.abs(0.5-x)
+        else :
+            return - d_ker(x)[0] / qs_ker(x)[0]
     else:
         return np.infty
 
@@ -552,17 +666,37 @@ def findM(qs_ker, d_ker):
         corresponding index of M
 
     """
-#    M = -1  # probablities cannot be negative, so -1 is small enough
-#    index = -1
-#    for i in range(qs.size):
-#        if qs_ker(qs[i]) > 0:
-#            if M <= d_ker(qs[i]) / qs_ker(qs[i]):
-#                M = d_ker(qs[i]) / qs_ker(qs[i])
-#                index = i
-#                
-    res = minimize_scalar(dq, args =(qs_ker, d_ker) ,bounds=(0,1), method='bounded')
+    # M = -1  # probablities cannot be negative, so -1 is small enough
+    # index = -1
+    # for i in range(qs.size):
+    #     if qs_ker(qs[i]) > 0:
+    #         if M <= d_ker(qs[i]) / qs_ker(qs[i]):
+    #             M = d_ker(qs[i]) / qs_ker(qs[i])
+    #             index = i
     
-    return -res.fun[0], res.x[0]
+#                
+    # xs = np.linspace(0, 1, 1000)
+    # ys = np.array([dq(x, qs_ker, d_ker) for x in xs])
+    # plt.plot(xs, ys)
+    # plt.ylabel('d/q')
+    # plt.show()
+    
+    xs = np.linspace(0, 1, 1000)
+    ys = np.array([dq(x, qs_ker, d_ker) for x in xs], dtype=np.float64)
+    plt.plot(xs, ys)
+    plt.ylabel('d/q')
+    plt.xlabel('x')
+    plt.show()
+    
+    res = minimize_scalar(dq, args =(qs_ker, d_ker) ,bounds=(0,1), method='bounded', 
+                          options={'maxiter': 5000})
+    # res = minimize(dq, [0.5], args =(qs_ker, d_ker) ,bounds=((0,1)), method='L-BFGS-B')
+    
+    
+    try:
+        return -res.fun[0], res.x[0]
+    except Exception:
+        return -res.fun, res.x
 
 
 def find_least_norm(nQubits, ptilde):
@@ -769,18 +903,21 @@ def output(d,
             writer.writerow(post_lambdas[i])
 
     # Plots
-    figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+    # fig = plot_setup()
+    # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+    plt.figure(figsize=(width,height), dpi=120, facecolor='white')
     plt.plot(xsd,
              d_ker(xsd),
              color='Red',
              linestyle='dashed',
              linewidth=3,
-             label='Observed QoI')
-    plt.plot(xsd, post_ker(xsd), color='Blue', label='QoI by Posterior')
+             label='$\\pi^{\\mathrm{obs}}_{\\mathcal{D}}$')
+    plt.plot(xsd, post_ker(xsd), color='Blue', label='$\\pi_{\\mathcal{D}}^{Q(\\mathrm{post})}$')
     plt.xlabel('Pr(Meas. 0)')
     plt.ylabel('Density')
     plt.legend()
-    plt.savefig(file_address + 'QoI-Qubit%g.jpg' % interested_qubit)
+    plt.tight_layout()
+    plt.savefig(file_address + 'QoI-Qubit%g.pdf' % interested_qubit)
     plt.show()
 
     if show_denoised:
@@ -806,16 +943,19 @@ def output(d,
         ])
         qisk_ker = ss.gaussian_kde(res_qisk)
         
-        figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+        # fig = plot_setup()
+        # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
         #plt.plot(xsd,d_ker(xsd),color='Red',linestyle='dashed',label = '(Noisy) Data')
-        plt.plot(xsd, proc_ker(xsd), color='Blue', label='By Posteriors')
-        plt.plot(xsd, qisk_ker(xsd), color='green', label='By Provided Params')
-        plt.axvline(x=0.5, color='black', label='Ideal Value')
+        plt.figure(figsize=(width,height), dpi=120, facecolor='white')
+        plt.plot(xsd, proc_ker(xsd), color='Blue', label='By Post')
+        plt.plot(xsd, qisk_ker(xsd), color='green', label='By Prior')
+        plt.axvline(x=0.5, color='black', label='Ideal')
         plt.xlabel('Pr(Meas. 0)')
         plt.ylabel('Density')
         #plt.title('Denoised Pr(Meas. 0), Qubit %g'%interested_qubit)
         plt.legend()
-        plt.savefig(file_address + 'DQoI-Qubit%g.jpg' % interested_qubit)
+        plt.tight_layout()
+        plt.savefig(file_address + 'DQoI-Qubit%g.pdf' % interested_qubit)
         plt.show()
     return prior_lambdas, post_lambdas
 
