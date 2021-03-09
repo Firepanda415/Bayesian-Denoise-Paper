@@ -14,15 +14,125 @@ import pandas as pd
 import numpy as np
 import scipy.stats as ss
 import numpy.linalg as nl
+
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
+import matplotlib as mpl
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.preamble'] = [r'\usepackage{amsmath}'] 
 # For optimization
 from cvxopt import matrix, solvers
 
 from measfilter import *
 
-fig_size = (8,6)
-fig_dpi = 100
+_widths = {
+    # a4paper columnwidth = 426.79135 pt = 5.93 in
+    # letterpaper columnwidth = 443.57848 pt = 6.16 in
+    'onecolumn': {
+        'a4paper' : 5.93,
+        'letterpaper' : 6.16
+    },
+    # a4paper columnwidth = 231.84843 pt = 3.22 in
+    # letterpaper columnwidth = 240.24199 pt = 3.34 in
+    'twocolumn': {
+        'a4paper' : 3.22,
+        'letterpaper' : 3.34
+    }
+}
+
+_wide_widths = {
+    # a4paper wide columnwidth = 426.79135 pt = 5.93 in
+    # letterpaper wide columnwidth = 443.57848 pt = 6.16 in
+    'onecolumn': {
+        'a4paper' : 5.93,
+        'letterpaper' : 6.16
+    },
+    # a4paper wide linewidth = 483.69687 pt = 6.72 in
+    # letterpaper wide linewidth = 500.48400 pt = 6.95 in
+    'twocolumn': {
+        'a4paper' : 6.72,
+        'letterpaper' : 6.95
+    }
+}
+
+_fontsizes = {
+    10 : {
+        'tiny' : 5,
+        'scriptsize' : 7,
+        'footnotesize' : 8, 
+        'small' : 9, 
+        'normalsize' : 10,
+        'large' : 12, 
+        'Large' : 14, 
+        'LARGE' : 17,
+        'huge' : 20,
+        'Huge' : 25
+    },
+    11 : {
+        'tiny' : 6,
+        'scriptsize' : 8,
+        'footnotesize' : 9, 
+        'small' : 10, 
+        'normalsize' : 11,
+        'large' : 12, 
+        'Large' : 14, 
+        'LARGE' : 17,
+        'huge' :  20,
+        'Huge' :  25
+    },
+    12 : {
+        'tiny' : 6,
+        'scriptsize' : 8,
+        'footnotesize' : 10, 
+        'small' : 11, 
+        'normalsize' : 12,
+        'large' : 14, 
+        'Large' : 17, 
+        'LARGE' : 20,
+        'huge' :  25,
+        'Huge' :  25
+    }
+}
+
+_width         = 1
+_wide_width    = 1
+_quantumviolet = '#53257F'
+_quantumgray   = '#555555'
+
+
+columns = 'twocolumn'
+paper = 'a4paper'
+fontsize = 10
+
+
+plt.rcdefaults()
+    
+# Seaborn white is a good base style
+plt.style.use(['seaborn-white', '../Plots/quantum-plots.mplstyle'])
+
+
+_width = _widths[columns][paper]
+
+ 
+_wide_width = _wide_widths[columns][paper]
+
+# Use the default fontsize scaling of LaTeX
+
+fontsizes = _fontsizes[fontsize]
+
+plt.rcParams['axes.labelsize'] = fontsizes['small']
+plt.rcParams['axes.titlesize'] = fontsizes['large']
+plt.rcParams['xtick.labelsize'] = fontsizes['footnotesize']
+plt.rcParams['ytick.labelsize'] = fontsizes['footnotesize']
+plt.rcParams['font.size'] = fontsizes['small']
+
+aspect_ratio = 1/1.62
+width_ratio = 1.0
+wide = False
+
+width = (_wide_width if wide else _width) * width_ratio
+height = width * aspect_ratio
+
 
 
 ######################## For Parameter Characterzation ########################
@@ -382,21 +492,24 @@ def output_gate(d,
             writer.writerow(post_lambdas[i])
 
     # Plots
-    figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+    plt.figure(figsize=(width,height), dpi=120, facecolor='white')
+    # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
     plt.plot(xsd,
              d_ker(xsd),
              color='Red',
              linestyle='dashed',
              linewidth=3,
-             label='Observed QoI')
-    plt.plot(xsd, post_ker(xsd), color='Blue', label='QoI by Posterior')
+             label='$\\pi^{\\mathrm{obs}}_{\\mathcal{D}}$')
+    plt.plot(xsd, post_ker(xsd), color='Blue', label='$\\pi_{\\mathcal{D}}^{Q(\\mathrm{post})}$')
     plt.xlabel('Pr(Meas. 0)')
     plt.ylabel('Density')
     plt.legend()
-    plt.savefig(file_address + 'QoI-Qubit%g.jpg' % interested_qubit)
+    plt.tight_layout()
+    plt.savefig(file_address + 'QoI-Qubit%g.pdf' % interested_qubit)
     plt.show()
     
-    figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+    plt.figure(figsize=(width,height), dpi=120, facecolor='white')
+    # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
     eps_ker = ss.gaussian_kde(post_lambdas[:, 2])
     eps_line = np.linspace(
         np.min(post_lambdas, axis=0)[2],
@@ -405,8 +518,8 @@ def output_gate(d,
     plt.ticklabel_format(axis="x", style="sci", scilimits=(-5, 1))
     plt.xlabel('$\epsilon_g$')
     plt.ylabel('Density')
-    #plt.legend()
-    plt.savefig(file_address + 'Eps-Qubit%g.jpg' % interested_qubit)
+    plt.tight_layout()
+    plt.savefig(file_address + 'Eps-Qubit%g.pdf' % interested_qubit)
     plt.show()
     return prior_lambdas, post_lambdas
 
@@ -460,7 +573,8 @@ def read_post(itr,
         print('0 to 1: KL-Div(pi_D^obs,pi_D^Q(post)) = %6g' %
               (ss.entropy(d_ker(xs), post_ker(xs))))
         
-        figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+        # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+        plt.figure(figsize=(width,height), dpi=120, facecolor='white')
         post_qs = QoI_gate(post_lambdas, ideal_p0, gate_num)
         post_ker = ss.gaussian_kde(post_qs)
         plt.plot(xsd,
@@ -473,10 +587,12 @@ def read_post(itr,
         plt.xlabel('Pr(Meas. 0)')
         plt.ylabel('Density')
         plt.legend()
-        plt.savefig(file_address + 'QoI-Qubit%g.jpg' % interested_qubit)
+        plt.tight_layout()
+        plt.savefig(file_address + 'QoI-Qubit%g.pdf' % interested_qubit)
         plt.show()
         
-        figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+        # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+        plt.figure(figsize=(width,height), dpi=120, facecolor='white')
         eps_ker = ss.gaussian_kde(post_lambdas[:, 2])
         eps_line = np.linspace(
             np.min(post_lambdas, axis=0)[2],
@@ -485,8 +601,8 @@ def read_post(itr,
         plt.ticklabel_format(axis="x", style="sci", scilimits=(-5, 1))
         plt.xlabel('$\epsilon_g$')
         plt.ylabel('Density')
-        #plt.legend()
-        plt.savefig(file_address + 'Eps-Qubit%g.jpg' % interested_qubit)
+        plt.tight_layout()
+        plt.savefig(file_address + 'Eps-Qubit%g.pdf' % interested_qubit)
         plt.show()
 
     return post
@@ -511,19 +627,21 @@ def plotComparsion(data, post_lambdas, q, file_address=''):
     OBker = ss.gaussian_kde(OB)
     dker = ss.gaussian_kde(data)
     
-    figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
-    plt.plot(line, SBker(line), color='Green', linewidth=2, label='Standard')
-    plt.plot(line, OBker(line), color='Blue', linewidth=4, label='Consistent')
+    # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
+    plt.figure(figsize=(width,height), dpi=120, facecolor='white')
+    plt.plot(line, SBker(line), color='Green', linewidth=2, label='Stand.')
+    plt.plot(line, OBker(line), color='Blue', linewidth=2, label='Cons.')
     plt.plot(line,
              dker(line),
              color='Red',
              linestyle='dashed',
-             linewidth=6,
+             linewidth=4,
              label='Data')
     plt.xlabel('Pr(Meas. 0)')
     plt.ylabel('Density')
     plt.legend()
-    plt.savefig(file_address + 'SBOB-Qubit%g.jpg' % q)
+    plt.tight_layout()
+    plt.savefig(file_address + 'SBOB-Qubit%g.pdf' % q)
     plt.show()
 
 

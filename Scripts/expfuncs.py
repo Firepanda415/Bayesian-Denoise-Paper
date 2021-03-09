@@ -17,13 +17,14 @@ from qiskit.ignis.mitigation.measurement import (complete_meas_cal,
 
 import sys
 from measfilter import *
-from matplotlib.pyplot import figure
 
 sys.path.insert(1, '../QREM')
 import povmtools
 from DetectorTomography import DetectorTomographyFitter, QDTCalibrationSetup
 from quantum_tomography_qiskit import detector_tomography_circuits
 from QDTErrorMitigator import QDTErrorMitigator
+
+
 
 
 def all_methods_data(interested_qubits,
@@ -260,7 +261,7 @@ def create_filters(interested_qubits,
     if from_file:
         mf.post_from_file()
     else:
-        mf.inference(nPrior=100000, seed=seed,
+        mf.inference(nPrior=40000, seed=seed,
                      show_denoised=show_denoised,
                      shots_per_point=shots_per_point)
 
