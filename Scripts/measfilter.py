@@ -21,8 +21,7 @@ from matplotlib.pyplot import figure
 
 # For optimization
 from cvxopt import matrix, solvers
-from scipy.optimize import minimize_scalar
-from scipy.special import j1
+from scipy.optimize import minimize_scalar,minimize
 
 # fig_size = (8,6)
 # fig_dpi = 100
@@ -633,11 +632,16 @@ def QoI(prior_lambdas):
 
 
 def dq(x, qs_ker, d_ker):
-    if qs_ker(x)[0] > 0:
-        if np.abs(d_ker(x)[0]) <1e-6: # A lot of 0s in both sides may cause opt algorithm terminates
-            return np.abs(0.5-x)
-        else :
-            return - d_ker(x)[0] / qs_ker(x)[0]
+    # if np.abs(qs_ker(x)[0])  > 0:
+    #     if d_ker(x) == 0: # A lot of 0s in both sides may cause opt algorithm terminates
+    #         # return np.abs(0.5-x)
+    #         return np.infty
+    #     else :
+    #         return - d_ker(x)[0] / qs_ker(x)[0] 
+    # else:
+    #     return np.infty
+    if np.abs(qs_ker(x)[0])  > 1e-6 and np.abs(d_ker(x)[0])  > 1e-6:
+        return - d_ker(x)[0] / qs_ker(x)[0] 
     else:
         return np.infty
 
@@ -675,22 +679,20 @@ def findM(qs_ker, d_ker):
     #             index = i
     
 #                
-    # xs = np.linspace(0, 1, 1000)
-    # ys = np.array([dq(x, qs_ker, d_ker) for x in xs])
-    # plt.plot(xs, ys)
-    # plt.ylabel('d/q')
-    # plt.show()
-    
     xs = np.linspace(0, 1, 1000)
-    ys = np.array([dq(x, qs_ker, d_ker) for x in xs], dtype=np.float64)
+    ys = np.array([dq(x, qs_ker, d_ker) for x in xs])
+    plt.figure(figsize=(width,height), dpi=120, facecolor='white')
     plt.plot(xs, ys)
     plt.ylabel('d/q')
     plt.xlabel('x')
     plt.show()
-    
-    res = minimize_scalar(dq, args =(qs_ker, d_ker) ,bounds=(0,1), method='bounded', 
-                          options={'maxiter': 5000})
-    # res = minimize(dq, [0.5], args =(qs_ker, d_ker) ,bounds=((0,1)), method='L-BFGS-B')
+   
+    # Remove consecutive np.inf, otherwise optimization will fail
+    #rough_dq = ys[(ys<np.inf) & (np.abs(ys)>1e-3)]
+    rough_xs = xs[ys<np.inf]
+    bds = (rough_xs[0], rough_xs[-1])
+    # res = minimize_scalar(dq, args =(qs_ker, d_ker) ,bounds=bounds, method='bounded', options={'maxiter': 5000})
+    res = minimize(dq, (rough_xs[np.argmin(ys[ys<np.inf])],), args =(qs_ker, d_ker) ,bounds=(bds,), method='L-BFGS-B')
     
     
     try:
