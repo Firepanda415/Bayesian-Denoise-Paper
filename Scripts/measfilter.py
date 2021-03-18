@@ -4,7 +4,7 @@ Created on Thu Jul 16 18:19:38 2020
 
 @author: Muqing Zheng
 """
-
+print("Formal Installation")
 # Qiskit
 from qiskit import QuantumCircuit, transpile, execute
 from qiskit.tools.monitor import job_monitor
@@ -112,7 +112,8 @@ fontsize = 10
 plt.rcdefaults()
     
 # Seaborn white is a good base style
-plt.style.use(['seaborn-white', '../Plots/quantum-plots.mplstyle'])
+from pathlib import Path
+plt.style.use(['seaborn-white', Path(__file__).parent / "Plot\quantum-plots.mplstyle"])
 
 
 _width = _widths[columns][paper]
