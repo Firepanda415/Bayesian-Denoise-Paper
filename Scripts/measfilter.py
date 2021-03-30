@@ -352,10 +352,12 @@ def read_filter_data(file_address=''):
     Returns: numpy array
       An array of bit strings.
     """
-    with open(file_address + 'Filter_data.csv', mode='r') as measfile:
-        reader = csv.reader(measfile)
-        cali01 = np.asarray([row for row in reader][0])
-
+    # Should be able to use np.genfromtxt
+    cali01 = np.genfromtxt(file_address + 'Filter_data.csv', delimiter=',',dtype=np.str)
+    if len(cali01) < 2:
+        with open(file_address + 'Filter_data.csv', mode='r') as measfile:
+            reader = csv.reader(measfile)
+            cali01 = np.asarray([row for row in reader][0])
     return cali01
 
 
@@ -684,7 +686,7 @@ def findM(qs_ker, d_ker):
     ys = np.array([dq(x, qs_ker, d_ker) for x in xs])
     plt.figure(figsize=(width,height), dpi=120, facecolor='white')
     plt.plot(xs, ys)
-    plt.ylabel('d/q')
+    plt.ylabel('-d/q')
     plt.xlabel('x')
     plt.show()
    
@@ -807,9 +809,9 @@ def output(d,
 #    qiskit_ker = ss.gaussian_kde(qiskit_p0)
 
     if average_lambdas[0] == 1 or average_lambdas[0] < 0.7:
-        average_lambdas[0] = 0.9
+        average_lambdas[0] = 0.95
     if average_lambdas[1] == 1 or average_lambdas[1] < 0.7:
-        average_lambdas[1] = 0.9
+        average_lambdas[1] = 0.95
 
     # Sample prior lambdas, assume prior distribution is Normal distribution with mean as the given probality from IBM
     # Absolute value is used here to avoid negative values, so it is little twisted, may consider Gamma Distribution
@@ -969,6 +971,8 @@ class MeasFilter:
     Attributes:
         qubit_order: array,
           using order[LastQubit, ..., FirstQubit].
+        data: bit string array,
+          Has to be bit string array from circuit of all hadamard gates, leave as [] if data is saved already
         file_address: string
           the address for saving Params.csv and Filter_data.csv. 
           End with '/' if not empty.
@@ -988,16 +992,20 @@ class MeasFilter:
           Not None after execute inference()
           
     """
-    def __init__(self, qubit_order, file_address=''):
+    def __init__(self, qubit_order, data = [], file_address=''):
         self.file_address = file_address
+        if len(data) < 1:
+            self.data = read_filter_data(self.file_address)
+        else:
+            self.data = data
+            
         self.qubit_order = qubit_order
         self.prior = {}
         self.post = {}
         self.params = None
-        self.data = None
         self.mat_mean = None
         self.mat_mode = None
-
+            
     def create_filter_mat(self):
         # Create filter matrix with Posterior mean
         first = True
@@ -1062,15 +1070,24 @@ class MeasFilter:
 
         """
 
-        self.data = read_filter_data(self.file_address)
-        self.params = read_params(self.file_address)
+        
+        try:
+            self.params = read_params(self.file_address)
+            itr = self.params[0]['itr']
+            shots = self.params[0]['shots']
+            num_points = int(itr * shots / shots_per_point)
+        except Exception:
+            num_points = int(len(self.data)/shots_per_point)
+            self.params = {}
+            for q in self.qubit_order:
+                self.params[q] = {}
+                self.params[q]['pm1p0'] = 0.05
+                self.params[q]['pm0p1'] = 0.05
 
-        itr = self.params[0]['itr']
-        shots = self.params[0]['shots']
         info = {}
         for i in self.qubit_order:
             print('Qubit %d' % (i))
-            d = getData0(self.data, int(itr * shots / shots_per_point), i)
+            d = getData0(self.data, num_points, i)
             prior_lambdas, post_lambdas = output(
                 d,
                 i,
