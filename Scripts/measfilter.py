@@ -4,7 +4,7 @@ Created on Thu Jul 16 18:19:38 2020
 
 @author: Muqing Zheng
 """
-print("Formal Installation")
+# print("Formal Installation")
 # Qiskit
 from qiskit import QuantumCircuit, transpile, execute
 from qiskit.tools.monitor import job_monitor
