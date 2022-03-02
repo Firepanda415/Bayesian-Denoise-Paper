@@ -289,6 +289,7 @@ def QoI_gate(prior_lambdas, ideal_p0, gate_num):
 
 
 # Used to call output, delete ideal_p0 parameter
+# WARNING: After 2021 Summer, 0.5*eps_in_code = eps_in_paper
 def output_gate(d,
                 interested_qubit,
                 M,
@@ -513,9 +514,9 @@ def output_gate(d,
     # figure(num=None, figsize=fig_size, dpi=fig_dpi, facecolor='w', edgecolor='k')
     eps_ker = ss.gaussian_kde(post_lambdas[:, 2])
     eps_line = np.linspace(
-        np.min(post_lambdas, axis=0)[2],
-        np.max(post_lambdas, axis=0)[2], 1000)
-    plt.plot(eps_line, eps_ker(eps_line), color='Blue')
+        np.min(post_lambdas, axis=0)[2],  
+        np.max(post_lambdas, axis=0)[2], 1000) 
+    plt.plot(eps_line*0.5, eps_ker(eps_line), color='Blue') # WARNING: After 2021 Summer, 0.5*eps_in_code = eps_in_paper
     plt.ticklabel_format(axis="x", style="sci", scilimits=(-5, 1))
     plt.xlabel('$\epsilon_g$')
     plt.ylabel('Density')
@@ -726,7 +727,8 @@ def gate_denoise(m, p0s, lambdas):
 ########################## Class for Error Filtering ########################
 class GMFilter:
     """ Gate and Measurement error filter.
-
+        WARNING: After 2021 Summer, 0.5*eps_in_code = eps_in_paper
+        TODO: Change Code!!!!
     Attributes:
         interested_qubits: array,
           qubit indices that experiments are applied on.
