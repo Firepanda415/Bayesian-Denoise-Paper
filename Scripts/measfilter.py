@@ -452,7 +452,7 @@ def closest_average(post_lambdas):
 
 
 def dictToVec(nQubits, counts):
-    """ Transfer counts to probabilities
+    """ Transfer counts to vec
 
     Args:
       nQUbits: int
@@ -465,7 +465,7 @@ def dictToVec(nQubits, counts):
 
     Returns: numpy array
       an probability vector (array). E.g.
-      [0, 0.5, 0, 0.5] is the result from example above.
+      [0, 100, 0, 100] is the result from example above.
     """
     vec = np.zeros(2**nQubits)
     form = "{0:0" + str(nQubits) + "b}"
